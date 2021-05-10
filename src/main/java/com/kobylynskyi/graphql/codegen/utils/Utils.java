@@ -1,6 +1,7 @@
 package com.kobylynskyi.graphql.codegen.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.kobylynskyi.graphql.codegen.model.exception.UnableToCreateDirectoryException;
 import com.kobylynskyi.graphql.codegen.model.exception.UnableToDeleteDirectoryException;
 import com.kobylynskyi.graphql.codegen.model.graphql.GraphQLOperation;
@@ -20,6 +21,9 @@ import java.util.Objects;
 public final class Utils {
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    static {
+        OBJECT_MAPPER.registerModule(new Jdk8Module());
+    }
 
     private Utils() {
     }

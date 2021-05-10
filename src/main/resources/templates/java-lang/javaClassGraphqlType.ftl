@@ -17,6 +17,10 @@ import java.util.Objects;
 <#if toString>
 import java.util.StringJoiner;
 </#if>
+import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 <#if javaDoc?has_content>
 /**
@@ -34,6 +38,7 @@ import java.util.StringJoiner;
 <#list annotations as annotation>
 @${annotation}
 </#list>
+@JsonInclude(Include.NON_NULL)
 public class ${className} implements java.io.Serializable<#if implements?has_content><#list implements as interface>, ${interface}<#if interface_has_next></#if></#list></#if> {
 
 <#if fields?has_content>
@@ -44,7 +49,11 @@ public class ${className} implements java.io.Serializable<#if implements?has_con
         <#list field.annotations as annotation>
     @${annotation}
         </#list>
+    <#if field.mandatory>
     private ${field.type} ${field.name}<#if field.defaultValue?has_content> = ${field.defaultValue}</#if>;
+    <#else>
+    private Optional<${field.type}> ${field.name}<#if field.defaultValue?has_content> = ${field.defaultValue}</#if>;
+    </#if>
     </#list>
 </#if>
 
@@ -53,10 +62,24 @@ public class ${className} implements java.io.Serializable<#if implements?has_con
 
 <#if fields?has_content>
     public ${className}(<#list fields as field>${field.type} ${field.name}<#if field_has_next>, </#if></#list>) {
+    <#assign has_optional = false>
+    <#list fields as field>
+        <#if field.mandatory>
+        this.${field.name} = ${field.name};
+        <#else>
+        <#assign has_optional = true>
+        this.${field.name} = Optional.ofNullable(${field.name});
+        </#if>
+    </#list>
+    }
+
+    <#if has_optional>
+    public ${className}(<#list fields as field><#if field.mandatory>${field.type}<#else>Optional<${field.type}></#if> ${field.name}<#if field_has_next>, </#if></#list>) {
     <#list fields as field>
         this.${field.name} = ${field.name};
     </#list>
     }
+    </#if>
 </#if>
 
 <#if fields?has_content>
@@ -72,7 +95,11 @@ public class ${className} implements java.io.Serializable<#if implements?has_con
     @${field.deprecated.annotation}
         </#if>
     public <#if field.mandatory && field.definitionInParentType?has_content && !field.definitionInParentType.mandatory>${field.definitionInParentType.type}<#else>${field.type}</#if> get${field.name?cap_first}() {
+        <#if field.mandatory>
         return ${field.name};
+        <#else>
+        return (${field.name} == null || ${field.name}.isEmpty()) ? null : ${field.name}.get();
+        </#if>
     }
         <#if !immutableModels>
             <#if field.javaDoc?has_content>
@@ -86,7 +113,11 @@ public class ${className} implements java.io.Serializable<#if implements?has_con
     @${field.deprecated.annotation}
             </#if>
     public void set${field.name?cap_first}(${field.type} ${field.name}) {
+        <#if field.mandatory>
         this.${field.name} = ${field.name};
+        <#else>
+        this.${field.name} = Optional.ofNullable(${field.name});
+        </#if>
     }
         </#if>
 
@@ -133,7 +164,11 @@ public class ${className} implements java.io.Serializable<#if implements?has_con
         joiner.add("${field.originalName}: " + ${field.name});
                 </#if>
             <#else>
+        <#if field.mandatory>
         if (${field.name} != null) {
+        <#else>
+        if (${field.name} != null && ${field.name}.isPresent()) {
+        </#if>
                 <#if toStringForRequest>
             joiner.add("${field.originalName}: " + GraphQLRequestSerializer.getEntry(${field.name}<#if field.serializeUsingObjectMapper>, true</#if>));
                 <#else>
@@ -160,7 +195,11 @@ public class ${className} implements java.io.Serializable<#if implements?has_con
 
     <#if fields?has_content>
         <#list fields as field>
-        private ${field.type} ${field.name}<#if field.defaultValue?has_content> = ${field.defaultValue}</#if>;
+        <#if field.mandatory>
+        private ${field.type} ${field.name}<#if field.defaultValue?has_content> = Optional.ofNullable(${field.defaultValue})</#if>;
+        <#else>
+        private Optional<${field.type}> ${field.name}<#if field.defaultValue?has_content> = Optional.ofNullable(${field.defaultValue})</#if>;
+        </#if>
         </#list>
     </#if>
 
@@ -180,7 +219,11 @@ public class ${className} implements java.io.Serializable<#if implements?has_con
         @${field.deprecated.annotation}
             </#if>
         public Builder set${field.name?cap_first}(${field.type} ${field.name}) {
+            <#if field.mandatory>
             this.${field.name} = ${field.name};
+            <#else>
+            this.${field.name} = Optional.ofNullable(${field.name});
+            </#if>
             return this;
         }
 
